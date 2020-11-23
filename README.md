@@ -8,7 +8,7 @@ In this project, I apply what I've learned on data modeling with Postgres and bu
 * [Project Datasets](#project-datasets)
     - [Song Dataset](#song-dataset)
     - [Log Dataset](#log-dataset)
-* [Schema for Song Play Analysis](schema-for-song-play-analysis)
+* [Schema for Song Play Analysis](#schema-for-song-play-analysis)
     - [Fact Table](#fact-table)
     - [Dimension Tables](#dimension-tables)
 * [Files in the Project](#files-in-the-project)
