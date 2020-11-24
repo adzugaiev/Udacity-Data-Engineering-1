@@ -14,6 +14,7 @@ In this project, I apply what I've learned on data modeling with Postgres and bu
 * [Files in the Project](#files-in-the-project)
 * [Running the Project](#running-the-project)
 * [What I Have Learned](#what-i-have-learned)
+    - [Improvements and Fixes](#improvements-and-fixes)
 * [Author](#author)
 
 ## Project Datasets
@@ -63,13 +64,23 @@ Using the song and log datasets, I will to create a star schema optimized for qu
 
 Through the implementation of this project, while solving the project's core tasks, I've learned some new things:
 
-1) Using upsert with fields like `serial` and `timestamp`;
-1) Tried to implement time dimensions as generated columns, only to find out the version of PostgreSQL in the project space is not supporting them;
-1) Improved generation of the data files list to exclude checkpoints, see `get_files()`;
-1) A number of `pd.DataFrame` manipulations which I don't memorize anyway and google each time from Stackoverflow;
-1) *Level* is not a permanent attribute of a user, I think it's incorrect to set this dimension based on the `log_data`. I sorted it descending by timestamp, so at least we have the latest mentioned level of a user;
-1) I had to use string for the song length since `WHERE` condition on floating point value proved not reliable to me;
+1) Using upsert with fields like `serial` and `timestamp`.
+1) Tried to implement time dimensions as generated columns, only to find out the version of PostgreSQL in the project space is not supporting them.
+1) Improved generation of the data files list to exclude checkpoints, see `get_files()`.
+1) A number of `pd.DataFrame` manipulations which I don't memorize anyway and google each time from Stackoverflow.
+1) *Level* is not a permanent attribute of a user, I think it's incorrect to set this dimension based on the `log_data`. I sorted the data descending by timestamp, so at least we have the latest mentioned level of a user.
+1) I had to use string for the song length since WHERE condition on floating point value proved not reliable to me.
 1) Replaced the iterative insert of `log_data` with copy of the `DataFrame` [from the memory](https://naysan.ca/2020/05/09/pandas-to-postgresql-using-psycopg2-bulk-insert-performance-benchmark/) using `StringIO`. Copy insert is further used in `etl.py`, see `copy_from_stringio()`. I did not measure the difference in performance though. Making the CSV export & import match has drained the remainder of my motivation.
+
+### Improvements and Fixes
+
+Following the project review I made the following improvements and fixes:
+
+1) The `song_select` query now works correctly with the song name and the author name.
+1) Added the query in `test.ipynb` to locate the only row in `songplays` with values on `artist_id` and `song_id` columns. It's just one because we're working with a subset of a much larger dataset and not all rows are included.
+1) In `sql_queries.py`, extended queries `user_table_insert`, `song_table_insert`, and `artist_table_insert` to upsert selected columns.
+    - Still I think it is incorrect to upsert `users.level`. This upsert will update the level as many times as there are `log_data` records for the user. The final level will therefore depend on the order in which `log_data` records are processed. I solved this by sorting `log_data` descending by timestamp in the ETL process with no upsert.
+1) Added docstrings to more functions in `etl.py`.
 
 ## Author
 

@@ -9,13 +9,13 @@ def get_files(filepath, filemask = '*.*', exclude = ''):
     '''
     Returns the list of files under a given filepath, mask, and excluding specified system subfolders.
 
-            Parameters:
-                    filepath (str): Path to start with and look into subfolders;
-                    filemask (str): Files to look at, e.g. "*.json";
-                    exclude  (str): Subfolder(s) name (or tuple) to exclude from the list.
+    Parameters:
+        filepath (str): Path to start with and look into subfolders;
+        filemask (str): Files to look at, e.g. "*.json";
+        exclude  (str): Subfolder(s) name (or tuple) to exclude from the list.
 
-            Returns:
-                    all_files (list): A list of files matching the specified conditions.
+    Returns:
+        all_files (list): A list of files matching the specified conditions.
     '''    
     all_files = []
     for root, dirs, filez in os.walk(filepath): # 'files' looks unsafe here because of the same local variable
@@ -56,6 +56,9 @@ def copy_from_stringio(conn, df, table, which_columns = None):
     cursor.close()
 
 def process_song_file(cur, filepath):
+    '''
+    Reads data from a song file to insert one song record and one artist record.
+    '''
     # open song file
     df = pd.read_json(filepath, typ = 'series')
 
@@ -69,6 +72,9 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
+    '''
+    Reads data from a log file, filters by NextSong action, then inserts multiple time, user and songplay records.
+    '''
     # open log file
     df = pd.read_json(filepath, lines = True)
 
@@ -117,6 +123,15 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
+    '''
+    Iterates over JSON files from filepath to call process_data function per matching file.
+    
+    Parameters:
+        cur (cursor): Database connection cursor;
+        conn (connection): From psycopg2.connect();
+        filepath (str): Path to start with and look into subfolders;
+        func (function): Function executed per file, see process_song_file() and process_log_file().
+    '''
     # get all files matching extension from directory
     all_files = get_files(filepath, '*.json', exclude = '.ipynb_checkpoints')
 

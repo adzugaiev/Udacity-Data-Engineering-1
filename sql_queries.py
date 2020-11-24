@@ -68,7 +68,16 @@ CREATE TABLE IF NOT EXISTS time (
 # INSERT RECORDS
 
 songplay_table_insert = ("""
-INSERT INTO songplays (songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
+INSERT INTO songplays (
+    songplay_id,
+    start_time,
+    user_id,
+    level,
+    song_id,
+    artist_id,
+    session_id,
+    location,
+    user_agent)
 VALUES (DEFAULT, TIMESTAMP %s, %s, %s, %s, %s, %s, %s, %s)
 ;
 """)
@@ -79,16 +88,35 @@ VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (user_id) DO NOTHING;
 """)
 
+# Following the review, this user table insert is updating the level.
+# This upsert will update the level as many times as there are log_data records for the user.
+# The final level will therefore depend on the order in which log_data records are processed.
+
+user_table_insert_with_level = ("""
+INSERT INTO users (user_id, first_name, last_name, gender, level)
+VALUES (%s, %s, %s, %s, %s)
+ON CONFLICT (user_id) DO UPDATE SET
+    level = EXCLUDED.level;
+""")
+
+# Updated to upsert year when provided
+
 song_table_insert = ("""
 INSERT INTO songs (song_id, title, artist_id, year, duration)
 VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (song_id) DO NOTHING;
+ON CONFLICT (song_id) DO UPDATE SET
+    year = COALESCE (songs.year, EXCLUDED.year);
 """)
+
+# Updated to upsert location, latitude, longitude when provided
 
 artist_table_insert = ("""
 INSERT INTO artists (artist_id, name, location, latitude, longitude)
 VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (artist_id) DO NOTHING;
+ON CONFLICT (artist_id) DO UPDATE SET
+    location = COALESCE (artists.location, EXCLUDED.location),
+    latitude = COALESCE (artists.latitude, EXCLUDED.latitude),
+    longitude = COALESCE (artists.longitude, EXCLUDED.longitude);
 """)
 
 # Should you provide PostgreSQL version 12 or higher, I'd be able to implement hour, day, week, month, weekday as generated columns.
@@ -102,10 +130,12 @@ ON CONFLICT (start_time) DO NOTHING;
 # FIND SONGS
 
 song_select = ("""
-SELECT song_id, artist_id FROM songs
-WHERE song_id = %s
-AND artist_id = %s
-AND duration = %s;
+SELECT s.song_id, s.artist_id \
+FROM songs AS s JOIN artists AS a \
+ON s.artist_id = a.artist_id \
+WHERE s.title = %s \
+AND a.name = %s \
+AND s.duration = %s;
 """)
 
 # QUERY LISTS
