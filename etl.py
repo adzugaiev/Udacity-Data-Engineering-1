@@ -38,7 +38,8 @@ def copy_from_stringio(conn, df, table, which_columns = None):
         conn (connection): From psycopg2.connect();
         df (DataFrame): DataFrame to be copied into the table;
         table (str): Subfolder(s) name (or tuple) to exclude from the list;
-        which_columns (iterable): Column names, use to omit serial or defaulting attributes. If not specified, it is assumed that the entire table matches the file structure.
+        which_columns (iterable): Column names, use to omit serial or defaulting attributes.
+                                  If not specified, it is assumed that the entire table matches the file structure.
     '''    
     buffer = StringIO()
     df.to_csv(buffer, index = False, header = False, doublequote = False, sep = '\t', na_rep = 'NULL', escapechar = '"')
@@ -63,11 +64,11 @@ def process_song_file(cur, filepath):
     df = pd.read_json(filepath, typ = 'series')
 
     # insert song record
-    song_data = (df['song_id'], df['title'], df['artist_id'], df['year'], df['duration'])
+    song_data = (df.song_id, df.title, df.artist_id, df.year, str(df.duration), df.duration)
     cur.execute(song_table_insert, song_data)
     
     # insert artist record
-    artist_data = (df['artist_id'], df['artist_name'], df['artist_location'], df['artist_latitude'], df['artist_longitude'])
+    artist_data = (df.artist_id, df.artist_name, df.artist_location, df.artist_latitude, df.artist_longitude)
     cur.execute(artist_table_insert, artist_data)
 
 
@@ -94,8 +95,8 @@ def process_log_file(cur, filepath):
 
     # load user table
     # Level is not a permanent attribute of a user, I think it's incorrect to set this dimension based on the log_data.
-    # I can include timestamp to users_df and sort it descending, so at least we have the latest mentioned level of a user.
-    user_df = df[["ts", "userId", "firstName", "lastName", "gender", "level"]].sort_values(by = ["ts"], ascending = False)
+    # I can include timestamp to users_df and sort it, so at least we have the latest mentioned level of a user.
+    user_df = df[["ts", "userId", "firstName", "lastName", "gender", "level"]].sort_values(by = ["ts"])
 
     # insert user records
     for i, row in user_df.iterrows():
@@ -116,7 +117,8 @@ def process_log_file(cur, filepath):
         else:
             songid, artistid = None, None
 
-        songplay_row = [pd.to_datetime(row.ts, unit='ms'), row.userId, row.level, songid, artistid, row.sessionId, row.location, row.userAgent.strip('"')]
+        songplay_row = [pd.to_datetime(row.ts, unit='ms'), row.userId, row.level, songid, artistid,
+                        row.sessionId, row.location, row.userAgent.strip('"')]
         songplay_df = songplay_df.append(dict(zip(songplay_cols, songplay_row)), ignore_index=True)
 
     copy_from_stringio(cur.connection, songplay_df, 'songplays', songplay_cols)
@@ -147,6 +149,9 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    '''
+    Establish the database connection and run data processing.
+    '''
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 

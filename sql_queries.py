@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS songs (
     title varchar,
     artist_id varchar,
     year smallint,
-    duration varchar
+    duration_str varchar,
+    duration_float real
 );
 """)
 
@@ -48,8 +49,8 @@ CREATE TABLE IF NOT EXISTS artists (
     artist_id varchar PRIMARY KEY,
     name varchar,
     location varchar,
-    latitude varchar,
-    longitude varchar
+    latitude real,
+    longitude real
 );
 """)
 
@@ -82,30 +83,21 @@ VALUES (DEFAULT, TIMESTAMP %s, %s, %s, %s, %s, %s, %s, %s)
 ;
 """)
 
-user_table_insert = ("""
-INSERT INTO users (user_id, first_name, last_name, gender, level)
-VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (user_id) DO NOTHING;
-""")
-
 # Following the review, this user table insert is updating the level.
 # This upsert will update the level as many times as there are log_data records for the user.
 # The final level will therefore depend on the order in which log_data records are processed.
 
-user_table_insert_with_level = ("""
+user_table_insert = ("""
 INSERT INTO users (user_id, first_name, last_name, gender, level)
 VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (user_id) DO UPDATE SET
     level = EXCLUDED.level;
 """)
 
-# Updated to upsert year when provided
-
 song_table_insert = ("""
-INSERT INTO songs (song_id, title, artist_id, year, duration)
-VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (song_id) DO UPDATE SET
-    year = COALESCE (songs.year, EXCLUDED.year);
+INSERT INTO songs (song_id, title, artist_id, year, duration_str, duration_float)
+VALUES (%s, %s, %s, %s, %s, %s)
+ON CONFLICT (song_id) DO NOTHING;
 """)
 
 # Updated to upsert location, latitude, longitude when provided
@@ -113,10 +105,7 @@ ON CONFLICT (song_id) DO UPDATE SET
 artist_table_insert = ("""
 INSERT INTO artists (artist_id, name, location, latitude, longitude)
 VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (artist_id) DO UPDATE SET
-    location = COALESCE (artists.location, EXCLUDED.location),
-    latitude = COALESCE (artists.latitude, EXCLUDED.latitude),
-    longitude = COALESCE (artists.longitude, EXCLUDED.longitude);
+ON CONFLICT (artist_id) DO NOTHING;
 """)
 
 # Should you provide PostgreSQL version 12 or higher, I'd be able to implement hour, day, week, month, weekday as generated columns.
@@ -135,7 +124,7 @@ FROM songs AS s JOIN artists AS a \
 ON s.artist_id = a.artist_id \
 WHERE s.title = %s \
 AND a.name = %s \
-AND s.duration = %s;
+AND s.duration_str = %s;
 """)
 
 # QUERY LISTS
